@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tourist Safety AI - Command Center</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #C2DDF0;
+            --success-color: #27ae60;
+            --warning-color: #f39c12;
+            --danger-color: #e74c3c;
+            --dark-bg: #1a1a1a;
+            --card-bg: #FFFFFF;
+            --light-blue: #C2DDF0;
+            --pure-white: #FFFFFF;
+        }
+
+        body {
+            background: linear-gradient(135deg, #C2DDF0 0%, #FFFFFF 50%, #C2DDF0 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            max-width: 100vw;
+            overflow-x: hidden;
+        }
+
+        .dashboard-container {
+            padding: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+            box-sizing: border-box;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        .header {
+            background: var(--pure-white);
+            border-radius: 12px;
+            padding: 32px 28px 24px;
+            margin-bottom: 32px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
+            border-left: 4px solid var(--secondary-color);
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .header h1 {
+            color: #2c3e50;
+            margin: 0;
+            font-size: 28px;
+            font-weight: 600;
+            letter-spacing: -0.5px;
+            line-height: 1.2;
+        }
+
+        .header-subtitle {
+            color: #64748b;
+            font-size: 15px;
+            margin-top: 4px;
+            font-weight: 400;
+        }
+
+        .system-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: #f8fafc;
+            padding: 8px 14px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .last-update {
+            font-size: 12px;
+            color: #94a3b8;
+            margin-left: 12px;
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #10b981;
+            animation: pulse 3s infinite;
+        }
+
+        .status-text {
+            font-size: 13px;
+            color: #475569;
+            font-weight: 500;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 24px 18px;
+            margin-bottom: 32px;
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            border-radius: 10px;
+            padding: 20px;
+            text-align: left;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+            border: 1px solid #f1f5f9;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            position: relative;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .stat-card:nth-child(2) {
+            margin-top: 12px;
+        }
+
+        .stat-card:nth-child(4) {
+            margin-top: -8px;
+        }
+
+        .stat-icon {
+            font-size: 18px;
+            margin-bottom: 8px;
+            opacity: 0.8;
+        }
+
+        .stat-icon.visitors { color: #3b82f6; }
+        .stat-icon.alerts { color: #ef4444; }
+        .stat-icon.incidents { color: #f59e0b; }
+        .stat-icon.safety { color: #10b981; }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: #1e293b;
+            margin: 8px 0 4px;
+            line-height: 1;
+        }
+
+        .stat-label {
+            color: #64748b;
+            font-size: 13px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-change {
+            font-size: 12px;
+            font-weight: 600;
+            margin-top: 6px;
+        }
+
+        .stat-change.positive { color: #10b981; }
+        .stat-change.negative { color: #ef4444; }
+        .stat-change.neutral { color: #64748b; }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1.2fr 0.8fr;
+            gap: 28px;
+            margin-bottom: 32px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+            border: 1px solid #f1f5f9;
+        }
+
+        .card h3 {
+            color: #1e293b;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .card h3 i {
+            color: #64748b;
+            font-size: 16px;
+        }
+
+        .alerts-list {
+            max-height: 340px;
+            overflow-y: auto;
+        }
+
+        .chart-container {
+            height: 200px;
+        }
+
+        #map {
+            height: 400px;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+
+        .chart-container canvas {
+            max-height: 300px !important;
+            max-width: 100% !important;
+        }
+
+        .alert-item {
+            background: #f8fafc;
+            border-left: 4px solid #e2e8f0;
+            border-radius: 0 8px 8px 0;
+            padding: 14px 16px;
+            margin-bottom: 12px;
+            transition: all 0.2s ease;
+        }
+
+        .alert-item:hover {
+            background: #f1f5f9;
+            transform: translateX(2px);
+        }
+
+        .alert-critical {
+            border-left-color: #ef4444;
+            background: #fef2f2;
+        }
+
+        .alert-high {
+            border-left-color: #f59e0b;
+            background: #fffbeb;
+        }
+
+        .alert-medium {
+            border-left-color: #3b82f6;
+            background: #eff6ff;
+        }
+
+        .alert-time {
+            color: #94a3b8;
+            font-size: 12px;
+            font-style: italic;
+        }
+
+        .tourist-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .tourist-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .risk-badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .risk-low { background: rgba(39, 174, 96, 0.2); color: var(--success-color); }
+        .risk-medium { background: rgba(243, 156, 18, 0.2); color: var(--warning-color); }
+        .risk-high { background: rgba(231, 76, 60, 0.2); color: var(--danger-color); }
+
+        .refresh-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: var(--secondary-color);
+            color: white;
+            border: none;
+            font-size: 1.5rem;
+            box-shadow: 0 4px 16px rgba(52, 152, 219, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .refresh-btn:hover {
+            background: var(--primary-color);
+            transform: scale(1.1);
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid var(--secondary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .full-width {
+            grid-column: 1 / -1;
+            margin-top: 8px;
+        }
+
+        /* Add subtle variations to break perfect symmetry */
+        .card:nth-child(3n+1) {
+            transform: rotate(0.2deg);
+        }
+
+        .card:nth-child(3n+2) {
+            transform: rotate(-0.1deg);
+        }
+
+        @keyframes subtle-float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-2px) rotate(0.1deg); }
+        }
+
+        .stat-card:nth-child(2n) {
+            animation: subtle-float 6s ease-in-out infinite;
+        }
+
+        @media (max-width: 768px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .dashboard-container {
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-content">
+                <div>
+                    <h1>SafeGuard Tourism Intelligence</h1>
+                    <div class="header-subtitle">Real-time safety monitoring & anomaly detection system</div>
+                </div>
+                <div class="system-status">
+                    <div class="status-indicator"></div>
+                    <span class="status-text">System Active</span>
+                    <span class="last-update">Last Update: <span id="lastUpdate">--:--:--</span></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistics Grid -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon visitors">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div class="stat-value" id="totalTourists">--</div>
+                <div class="stat-label">Visitors Tracked</div>
+                <div class="stat-change positive">+12% today</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon alerts">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div class="stat-value" id="activeAlerts">--</div>
+                <div class="stat-label">Safety Alerts</div>
+                <div class="stat-change neutral">No change</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon incidents">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <div class="stat-value" id="avgRiskScore">--</div>
+                <div class="stat-label">Risk Level</div>
+                <div class="stat-change positive">Improving</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon safety">
+                    <i class="fas fa-map-marker-alt"></i>
+                </div>
+                <div class="stat-value" id="safeZones">--</div>
+                <div class="stat-label">Safe Zones</div>
+                <div class="stat-change neutral">Stable</div>
+            </div>
+        </div>
+
+        <!-- Main Dashboard Grid -->
+        <div class="main-grid">
+            <!-- Map -->
+            <div class="card">
+                <h3><i class="fas fa-map"></i> Live Tourist Tracking</h3>
+                <div id="map"></div>
+            </div>
+
+            <!-- Risk Score Chart -->
+            <div class="card">
+                <h3><i class="fas fa-chart-area"></i> Risk Score Trends</h3>
+                <div class="chart-container">
+                    <canvas id="riskChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Recent Safety Alerts -->
+            <div class="card">
+                <h3><i class="fas fa-bell"></i> Recent Safety Alerts</h3>
+                <div id="alertsList" class="alerts-list">
+                    <div class="alert-item alert-critical">
+                        <strong>CRITICAL: Panic Button Activated</strong><br>
+                        Tourist ID: T-001 | Location: Gateway of India<br>
+                        <span class="alert-time">2 minutes ago</span>
+                    </div>
+                    <div class="alert-item alert-high">
+                        <strong>HIGH: Missing Person Alert</strong><br>
+                        Tourist ID: T-003 | Last seen: Marine Drive<br>
+                        <span class="alert-time">15 minutes ago</span>
+                    </div>
+                    <div class="alert-item alert-medium">
+                        <strong>MEDIUM: Crowd Density Warning</strong><br>
+                        Zone: Colaba Market | Occupancy: 85%<br>
+                        <span class="alert-time">5 minutes ago</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tourist List -->
+            <div class="card">
+                <h3><i class="fas fa-list"></i> Tourist Status</h3>
+                <div class="tourist-list" id="touristList">
+                    <div class="tourist-item">
+                        <div>
+                            <strong>John Smith (USA)</strong><br>
+                            <small>Gateway of India</small>
+                        </div>
+                        <span class="risk-badge risk-high">HIGH</span>
+                    </div>
+                    <div class="tourist-item">
+                        <div>
+                            <strong>Maria Garcia (Spain)</strong><br>
+                            <small>Marine Drive</small>
+                        </div>
+                        <span class="risk-badge risk-low">LOW</span>
+                    </div>
+                    <div class="tourist-item">
+                        <div>
+                            <strong>Chen Wei (China)</strong><br>
+                            <small>Colaba Market</small>
+                        </div>
+                        <span class="risk-badge risk-medium">MED</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Crowd Analysis Chart -->
+        <div class="card full-width">
+            <h3><i class="fas fa-users-cog"></i> Crowd Density Analysis</h3>
+            <div class="chart-container">
+                <canvas id="crowdChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Refresh Button -->
+    <button class="refresh-btn" onclick="refreshDashboard()" title="Refresh Data">
+        <i class="fas fa-sync-alt" id="refreshIcon"></i>
+    </button>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Initialize Dashboard
+        let map, riskChart, crowdChart;
+        let refreshInterval;
+        const API_BASE = window.location.origin;
+
+        // Fetch data from AI backend
+        async function fetchDashboardData() {
+            try {
+                const response = await fetch(`${API_BASE}/api/dashboard`);
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                console.error('Error fetching dashboard data:', error);
+                return null;
+            }
+        }
+
+        // Initialize Map
+        function initMap() {
+            map = L.map('map').setView([18.9220, 72.8347], 13);
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+
+            // Add zone boundaries
+            const zones = [
+                {name: "Gateway of India", coords: [[18.920, 72.832], [18.924, 72.837]], color: "blue"},
+                {name: "Marine Drive", coords: [[18.938, 72.821], [18.942, 72.825]], color: "green"},
+                {name: "Colaba Market", coords: [[18.915, 72.831], [18.918, 72.835]], color: "orange"},
+                {name: "Restricted Area", coords: [[18.908, 72.818], [18.912, 72.822]], color: "red"}
+            ];
+
+            zones.forEach(zone => {
+                L.rectangle(zone.coords, {color: zone.color, weight: 2, fillOpacity: 0.1})
+                 .addTo(map)
+                 .bindPopup(zone.name);
+            });
+        }
+
+        // Update map with live tourist data
+        function updateMap(tourists) {
+            // Clear existing markers
+            map.eachLayer(layer => {
+                if (layer instanceof L.CircleMarker) {
+                    map.removeLayer(layer);
+                }
+            });
+
+            // Add tourist markers
+            Object.values(tourists).forEach(tourist => {
+                const color = tourist.risk_level === 'high' ? 'red' : 
+                             tourist.risk_level === 'medium' ? 'orange' : 'green';
+                
+                const marker = L.circleMarker([tourist.location.lat, tourist.location.lon], {
+                    color: color,
+                    fillColor: color,
+                    fillOpacity: 0.7,
+                    radius: tourist.status === 'emergency' ? 12 : 8
+                }).addTo(map);
+                
+                const statusIcon = tourist.status === 'emergency' ? '🚨' : 
+                                  tourist.status === 'alert' ? '⚠️' : 
+                                  tourist.status === 'missing' ? '🔍' : '✅';
+                
+                marker.bindPopup(`
+                    <b>${tourist.name} (${tourist.nationality})</b><br>
+                    Status: ${statusIcon} ${tourist.status.toUpperCase()}<br>
+                    Risk: ${tourist.risk_level.toUpperCase()}<br>
+                    Score: ${tourist.risk_score.toFixed(1)}/100<br>
+                    Zone: ${tourist.zone}<br>
+                    HR: ${tourist.heart_rate.toFixed(0)} bpm<br>
+                    Temp: ${tourist.temperature.toFixed(1)}°C
+                `);
+            });
+        }
+
+        // Initialize Charts
+        function initCharts() {
+            // Risk Score Chart
+            const riskCtx = document.getElementById('riskChart').getContext('2d');
+            riskChart = new Chart(riskCtx, {
+                type: 'line',
+                data: {
+                    labels: ['10:00', '10:15', '10:30', '10:45', '11:00', '11:15'],
+                    datasets: [{
+                        label: 'Average Risk Score',
+                        data: [45, 52, 48, 61, 75, 68],
+                        borderColor: '#e74c3c',
+                        backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100
+                        }
+                    },
+                    interaction: {
+                        intersect: false
+                    },
+                    animation: {
+                        duration: 0 // Disable animations to prevent growth
+                    }
+                }
+            });
+
+            // Crowd Density Chart
+            const crowdCtx = document.getElementById('crowdChart').getContext('2d');
+            crowdChart = new Chart(crowdCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Gateway of India', 'Marine Drive', 'Colaba Market', 'Taj Hotel Area'],
+                    datasets: [{
+                        label: 'Occupancy %',
+                        data: [85, 45, 92, 38],
+                        backgroundColor: [
+                            'rgba(231, 76, 60, 0.8)',
+                            'rgba(39, 174, 96, 0.8)',
+                            'rgba(231, 76, 60, 0.8)',
+                            'rgba(39, 174, 96, 0.8)'
+                        ],
+                        borderColor: [
+                            '#e74c3c',
+                            '#27ae60',
+                            '#e74c3c',
+                            '#27ae60'
+                        ],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100
+                        }
+                    },
+                    animation: {
+                        duration: 0 // Disable animations to prevent growth
+                    }
+                }
+            });
+        }
+
+        // Update Dashboard Data with live AI data
+        async function updateDashboard() {
+            const data = await fetchDashboardData();
+            if (!data) {
+                console.error('Failed to fetch dashboard data');
+                return;
+            }
+
+            // Update statistics
+            document.getElementById('totalTourists').textContent = data.statistics.total_tourists;
+            document.getElementById('activeAlerts').textContent = data.statistics.active_alerts;
+            document.getElementById('avgRiskScore').textContent = data.statistics.avg_risk_score;
+            document.getElementById('safeZones').textContent = data.statistics.safe_zones;
+            document.getElementById('lastUpdate').textContent = new Date(data.last_update).toLocaleTimeString();
+
+            // Update map
+            updateMap(data.tourists);
+
+            // Update alerts list
+            updateAlertsList(data.alerts);
+
+            // Update tourist list
+            updateTouristList(data.tourists);
+
+            // Update charts with real data
+            updateCharts(data);
+        }
+
+        // Update alerts list
+        function updateAlertsList(alerts) {
+            const alertsList = document.getElementById('alertsList');
+            if (alerts.length === 0) {
+                alertsList.innerHTML = '<div class="text-center text-muted">No active alerts</div>';
+                return;
+            }
+
+            alertsList.innerHTML = alerts.slice(-10).reverse().map(alert => {
+                const severityClass = alert.severity === 'critical' ? 'alert-critical' :
+                                    alert.severity === 'high' ? 'alert-high' : 'alert-medium';
+                const timeAgo = getTimeAgo(alert.timestamp);
+                
+                return `
+                    <div class="alert-item ${severityClass}">
+                        <strong>${alert.severity.toUpperCase()}: ${alert.message}</strong><br>
+                        Tourist: ${alert.tourist_name} | Location: ${alert.location.lat.toFixed(4)}, ${alert.location.lon.toFixed(4)}<br>
+                        <span class="alert-time">${timeAgo}</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Update tourist list
+        function updateTouristList(tourists) {
+            const touristList = document.getElementById('touristList');
+            touristList.innerHTML = Object.values(tourists).map(tourist => {
+                const riskClass = `risk-${tourist.risk_level}`;
+                return `
+                    <div class="tourist-item">
+                        <div>
+                            <strong>${tourist.name} (${tourist.nationality})</strong><br>
+                            <small>${tourist.zone} | ${tourist.status.toUpperCase()}</small>
+                        </div>
+                        <span class="risk-badge ${riskClass}">${tourist.risk_level.toUpperCase()}</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Update charts with live data
+        function updateCharts(data) {
+            // Update risk chart
+            if (riskChart && data.risk_history.length > 0) {
+                const maxPoints = 10; // Limit to 10 points to prevent growth
+                const recentHistory = data.risk_history.slice(-maxPoints);
+                
+                const labels = recentHistory.map(point => 
+                    new Date(point.timestamp).toLocaleTimeString().slice(0, 5)
+                );
+                const values = recentHistory.map(point => point.avg_risk);
+                
+                riskChart.data.labels = labels;
+                riskChart.data.datasets[0].data = values;
+                riskChart.update('none'); // Use 'none' mode to prevent animations
+            }
+
+            // Update crowd chart
+            if (crowdChart && data.crowd_data) {
+                const zones = Object.keys(data.crowd_data).slice(0, 4); // Limit to 4 zones
+                const occupancies = zones.map(zone => data.crowd_data[zone].occupancy);
+                const colors = zones.map(zone => {
+                    const risk = data.crowd_data[zone].risk_level;
+                    return risk === 'high' ? 'rgba(231, 76, 60, 0.8)' :
+                           risk === 'medium' ? 'rgba(243, 156, 18, 0.8)' :
+                           'rgba(39, 174, 96, 0.8)';
+                });
+                
+                crowdChart.data.labels = zones;
+                crowdChart.data.datasets[0].data = occupancies;
+                crowdChart.data.datasets[0].backgroundColor = colors;
+                crowdChart.update('none'); // Use 'none' mode to prevent animations
+            }
+        }
+
+        // Helper function to get time ago
+        function getTimeAgo(timestamp) {
+            const now = new Date();
+            const alertTime = new Date(timestamp);
+            const diffMs = now - alertTime;
+            const diffMins = Math.floor(diffMs / (1000 * 60));
+            
+            if (diffMins < 1) return 'Just now';
+            if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`;
+            const diffHours = Math.floor(diffMins / 60);
+            return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+        }
+
+        // Refresh Dashboard
+        function refreshDashboard() {
+            const refreshIcon = document.getElementById('refreshIcon');
+            refreshIcon.style.animation = 'spin 1s linear infinite';
+            
+            updateDashboard();
+            
+            setTimeout(() => {
+                refreshIcon.style.animation = '';
+            }, 1000);
+        }
+
+        // Initialize everything when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            initMap();
+            initCharts();
+            updateDashboard();
+            
+            // Auto-refresh every 10 seconds
+            refreshInterval = setInterval(updateDashboard, 10000);
+        });
+
+        // Handle page visibility change
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden) {
+                clearInterval(refreshInterval);
+            } else {
+                refreshInterval = setInterval(updateDashboard, 10000);
+                updateDashboard();
+            }
+        });
+    </script>
+</body>
+</html>
